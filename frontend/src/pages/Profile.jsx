@@ -10,6 +10,7 @@ import { formatNumberFull, formatRelativeTime, formatToRealTime, formatNumberSho
 import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import { useTranslation } from 'react-i18next';
+import { ACHIEVEMENTS, ACHIEVEMENT_TIER_COLORS } from '../game/achievements';
 
 const USER_PROFILE_QUERY = gql`
 query user($username: String!) {
@@ -43,6 +44,7 @@ query user($username: String!) {
       wave
       duration
     }
+    unlocked_achievements { id unlocked_at }
   }
 }
 `
@@ -62,6 +64,7 @@ query MeStats {
             wave
             duration
         }
+        unlocked_achievements { id unlocked_at }
     }
 }
 `
@@ -83,7 +86,7 @@ export default function Profile() {
     const { username } = useParams();
     const { user: loggedInUser, isLoggedIn, loading: authLoading } = useAuth();
     const navigate = useNavigate();
-    
+
     // Déterminer si on regarde son propre profil
     const isOwnProfile = !username || (loggedInUser && username === loggedInUser.username);
 
@@ -102,9 +105,14 @@ export default function Profile() {
     const [removeFriendMutation] = useMutation(REMOVE_FRIEND);
 
     // On unifie les données : on fusionne l'user de l'auth avec les stats/runs de la query
-    const displayUser = isOwnProfile 
-        ? (meData?.me ? { ...loggedInUser, ...meData.me, stats: {...loggedInUser?.stats, ...meData.me.stats} } : loggedInUser)
+    const displayUser = isOwnProfile
+        ? (meData?.me ? { ...loggedInUser, ...meData.me, stats: { ...loggedInUser?.stats, ...meData.me.stats } } : loggedInUser)
         : userData?.user_by_username;
+
+    const unlockedAchievementIds = React.useMemo(
+        () => new Set((displayUser?.unlocked_achievements || []).map(a => a.id)),
+        [displayUser?.unlocked_achievements]
+    );
 
     // On ne bloque le chargement principal que si on n'a pas encore l'auth ou si on attend les datas d'un autre
     const loading = authLoading || (!isOwnProfile && userDataLoading);
@@ -160,32 +168,32 @@ export default function Profile() {
                     <div className="profile-card">
                         <div className="avatar-large">{displayUser?.username.substring(0, 2).toUpperCase()}</div>
                         <h1 className="username">{displayUser?.username}</h1>
-                        <span className="identity-rank">{t("account.globalRank", {rank: displayUser?.rank || 'N/A'})}</span>
-                        <span className="identity-since">{t("account.memberSince", {since: new Date(displayUser?.date_created).toDateString()})}</span>
-                        
+                        <span className="identity-rank">{t("account.globalRank", { rank: displayUser?.rank || 'N/A' })}</span>
+                        <span className="identity-since">{t("account.memberSince", { since: new Date(displayUser?.date_created).toDateString() })}</span>
+
                         <div style={{ textAlign: 'center', margin: '15px 0' }}>
                             {!isOwnProfile ?
-                                displayUser?.is_friend || displayUser?.is_friend === null ? 
+                                displayUser?.is_friend || displayUser?.is_friend === null ?
                                     <button className="btn-remove-friend" onClick={handleRemoveFriend}>{t(displayUser?.is_friend === null ? 'friends.removePendingButton' : 'friends.removeButton')}</button>
-                                :
+                                    :
                                     <button className="btn-add-friend" onClick={handleAddFriend}>{t('friends.addButton')}</button>
-                            :
+                                :
                                 <Link to="/account"><button className="btn-edit-profile">{t('account.updateButton')}</button></Link>
                             }
                         </div>
                     </div>
 
                     <div className="last-run-banner">
-                        <div className="lr-label">{t("account.lastRun", {since: formatRelativeTime(displayUser?.last_run?.date)})}</div>
+                        <div className="lr-label">{t("account.lastRun", { since: formatRelativeTime(displayUser?.last_run?.date) })}</div>
                         <div className="lr-main">
                             <div>
                                 {displayUser?.last_run === null ?
-                                <div className="lr-score">...</div>
-                                :
-                                <>
-                                    <div className="lr-score">{formatNumberFull(displayUser?.last_run.score)} pts</div>
-                                    <div className="lr-sub">{t("game.wave",{ number: displayUser?.last_run.wave})} · {formatToRealTime(displayUser?.last_run.duration)}</div>
-                                </>}
+                                    <div className="lr-score">...</div>
+                                    :
+                                    <>
+                                        <div className="lr-score">{formatNumberFull(displayUser?.last_run.score)} pts</div>
+                                        <div className="lr-sub">{t("game.wave", { number: displayUser?.last_run.wave })} · {formatToRealTime(displayUser?.last_run.duration)}</div>
+                                    </>}
                             </div>
                             {/* TODO: ADD WEAPON <span className="lr-tag">{stats.favoriteWeapon}</span> */}
                         </div>
@@ -194,23 +202,28 @@ export default function Profile() {
                     <div className="panel">
                         <div className="panel-header">
                             <span className="panel-title">{t("account.achievements.title")}</span>
-                            <span className="tag-blue">{t("utils.comingSoon")}</span>
+                            <span className="tag-blue">
+                                {t('achievements.progress', { unlocked: unlockedAchievementIds.size, total: ACHIEVEMENTS.length })}
+                            </span>
                         </div>
                         <div className="panel-body-compact">
                             <div className="ach-grid-preview">
-                                {/* {stats.achievements.map((ach, i) => (
-                                    <div key={i} className={`ach-icon-mini ${ach.unlocked ? '' : 'locked'}`} data-tip={ach.title}>
-                                        {ach.unlocked ? ach.icon : '🔒'}
-                                    </div>
-                                ))} */}
-                                {[...Array(6)].map((_, i) => (
-                                    <div key={i+10} className="ach-icon-mini locked">🔒</div>
-                                ))}
+                                {ACHIEVEMENTS.map(ach => {
+                                    const unlocked = unlockedAchievementIds.has(ach.id);
+                                    return (
+                                        <div
+                                            key={ach.id}
+                                            className={`ach-icon-mini${unlocked ? '' : ' locked'}`}
+                                            style={unlocked ? { borderColor: ACHIEVEMENT_TIER_COLORS[ach.tier] } : undefined}
+                                            data-tip={unlocked
+                                                ? `${t(`achievements.list.${ach.id}.name`)} — ${t(`achievements.list.${ach.id}.desc`)}`
+                                                : t('achievements.locked')}
+                                        >
+                                            {unlocked ? ach.icon : '🔒'}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            {/* <div className="ach-progress-bar">
-                                <div className="ach-progress-fill" style={{ width: '50%' }}></div>
-                            </div> */}
-                            {/* <button className="btn-view-all">View all achievements →</button> */}
                         </div>
                     </div>
                 </aside>
@@ -258,7 +271,7 @@ export default function Profile() {
                                         <span><span className="wave-tag">{run.wave}</span></span>
                                         <span>{formatToRealTime(run.duration)}</span>
                                     </div>
-                                )): ""}
+                                )) : ""}
                             </div>
                         </div>
                     </section>

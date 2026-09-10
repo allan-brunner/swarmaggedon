@@ -8,6 +8,7 @@ import { authResolvers, authTypeDefs } from './auth.js';
 import { runResolvers, runTypeDefs } from './runs.js';
 import { globalResolvers, globalTypeDefs } from './global.js';
 import { adminResolvers, adminTypeDefs } from './admin.js';
+import { achievementResolvers, achievementTypeDefs } from './achievements.js';
 
 const baseTypeDefs = gql`
   type Query {
@@ -27,6 +28,7 @@ export const typeDefs = mergeTypeDefs([
   runTypeDefs,
   globalTypeDefs,
   adminTypeDefs,
+  achievementTypeDefs,
 ]);
 
 export const resolvers = mergeResolvers([
@@ -36,4 +38,5 @@ export const resolvers = mergeResolvers([
   runResolvers,
   globalResolvers,
   adminResolvers,
+  achievementResolvers,
 ]);

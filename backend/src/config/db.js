@@ -22,11 +22,13 @@ const ensureIndexes = async () => {
   //   - runs {date: 1, score: -1}      daily/weekly leaderboards ($match date + $sort score)
   //   - runs {score: -1}               all-time leaderboard ($sort score, index scan delivers top-10)
   //   - users {last_online: 1}         Global.stats.players_online (countDocuments)
+  //   - user_achievements {user_id, achievement_id} unique   dedupe unlocks + fast per-user lookup
   await Promise.all([
     db.collection(COLLECTION_RUNS).createIndex({ user_id: 1, score: -1 }),
     db.collection(COLLECTION_RUNS).createIndex({ date: 1, score: -1 }),
     db.collection(COLLECTION_RUNS).createIndex({ score: -1 }),
     db.collection(COLLECTION_USERS).createIndex({ last_online: 1 }),
+    db.collection(COLLECTION_USER_ACHIEVEMENTS).createIndex({ user_id: 1, achievement_id: 1 }, { unique: true }),
   ]);
 };
 
@@ -35,3 +37,4 @@ export const getDB = () => db;
 export const COLLECTION_USERS = 'users'
 export const COLLECTION_FRIENDS = 'friends'
 export const COLLECTION_RUNS = 'runs'
+export const COLLECTION_USER_ACHIEVEMENTS = 'user_achievements'

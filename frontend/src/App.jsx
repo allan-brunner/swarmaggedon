@@ -9,23 +9,26 @@ import Auth from './pages/Auth'
 import Profile from './pages/Profile'
 import { AuthProvider } from './context/AuthContext'
 import Admin from './pages/Admin'
+import { AchievementProvider } from './context/AchievementsContext'
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="app-container">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="/friends" element={<Friends />} />
-            <Route path="/profile/:username?" element={<Profile />} />
-            <Route path="/game" element={<Game />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<Admin />} />
-          </Routes>
-        </div>
-      </Router>
+      <AchievementProvider>
+        <Router>
+          <div className="app-container">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/friends" element={<Friends />} />
+              <Route path="/profile/:username?" element={<Profile />} />
+              <Route path="/game" element={<Game />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/admin" element={<Admin />} />
+            </Routes>
+          </div>
+        </Router>
+      </AchievementProvider>
     </AuthProvider>
   )
 }
