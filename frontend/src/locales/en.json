@@ -697,5 +697,72 @@
     "new": "NEW",
     "hp": "HP",
     "dmg": "DMG"
+  },
+  "achievements": {
+    "unlocked": "Achievement Unlocked!",
+    "progress": "{{unlocked}}/{{total}} unlocked",
+    "locked": "Locked achievement",
+    "list": {
+      "first_blood": {
+        "name": "First Blood",
+        "desc": "Complete your first run."
+      },
+      "wave_10": {
+        "name": "Survivor",
+        "desc": "Reach wave 10 in a single run."
+      },
+      "wave_25": {
+        "name": "Veteran",
+        "desc": "Reach wave 25 in a single run."
+      },
+      "wave_50": {
+        "name": "Unstoppable",
+        "desc": "Reach wave 50 in a single run."
+      },
+      "boss_slayer": {
+        "name": "Boss Slayer",
+        "desc": "Defeat your first boss."
+      },
+      "boss_hunter": {
+        "name": "Boss Hunter",
+        "desc": "Defeat 10 bosses."
+      },
+      "kills_100": {
+        "name": "Centurion",
+        "desc": "Reach 100 total kills."
+      },
+      "kills_1000": {
+        "name": "Exterminator",
+        "desc": "Reach 1,000 total kills."
+      },
+      "kills_10000": {
+        "name": "Reaper",
+        "desc": "Reach 10,000 total kills."
+      },
+      "survive_10m": {
+        "name": "Marathon",
+        "desc": "Survive 10 minutes in a single run."
+      },
+      "survive_30m": {
+        "name": "Iron Will",
+        "desc": "Survive 30 minutes in a single run."
+      },
+      "score_10k": {
+        "name": "High Roller",
+        "desc": "Reach a high score of 10,000."
+      },
+      "score_100k": {
+        "name": "Legend",
+        "desc": "Reach a high score of 100,000."
+      },
+      "dedicated_10": {
+        "name": "Dedicated",
+        "desc": "Play 10 games."
+      },
+      "dedicated_50": {
+        "name": "Committed",
+        "desc": "Play 50 games."
+      }
+    }
   }
 }
