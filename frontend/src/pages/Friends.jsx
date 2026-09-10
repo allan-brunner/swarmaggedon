@@ -10,7 +10,7 @@ import NavBar from "../components/NavBar";
 import { PatchNotes } from "../components/PatchNotes";
 import { WikiHelp } from "../components/Wiki";
 import { useTranslation } from "react-i18next";
-import { useAchievements } from "../context/AchievementContext";
+import { useAchievements } from "../context/AchievementsContext";
 
 const GET_FRIENDS = gql`
   query GetFriends {

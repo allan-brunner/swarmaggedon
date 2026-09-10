@@ -17,7 +17,7 @@ import { useQuery, useMutation } from "@apollo/client/react";
 import { gql } from "@apollo/client";
 import { useTranslation } from "react-i18next";
 import { ACHIEVEMENTS, ACHIEVEMENT_TIER_COLORS } from "../game/achievements";
-import { useAchievements } from "../context/AchievementContext";
+import { useAchievements } from "../context/AchievementsContext";
 
 const USER_PROFILE_QUERY = gql`
   query user($username: String!) {
