@@ -1,6 +1,7 @@
 import { createWeapon, tryAttack, WEAPON_TYPE, WEAPON_ENCHANT } from '../weapon.js';
 import { TEAM } from '../world.js';
 import { tickItems, tryConsumeUndying } from '../drop.js';
+import { updateSpecialization } from '../specializations.js';
 
 const PLAYER_IFRAME_DURATION = 0.45;
 
@@ -24,6 +25,7 @@ export function createPlayer(canvasWidth, canvasHeight) {
 
         weapon: undefined,
         items: [],
+        specialization: null,
 
         iFramesTime: 0,
         dead: false,
@@ -34,6 +36,7 @@ export function createPlayer(canvasWidth, canvasHeight) {
             this._faceNearestEnemy(world);
             tickItems(this, dt, world);
             tryAttack(this.weapon, this, world, dt, inputState);
+            updateSpecialization(this, dt, world);
         },
 
         _move(dt, input) {

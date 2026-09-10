@@ -96,7 +96,18 @@ export function createBullet(x, y, width, angle, speed, damage, range, type = BU
         _aoeHit(target, world) {
             target.takeDamage(this.damage, this, world);
             const blastRadius = this.args?.aoeRadius ?? 150;
-            world.aoeBlast(this.x, this.y, blastRadius, this.damage, this.targetTeam, target, '#e67e22');
+            world.aoeBlast(this.x, this.y, blastRadius, this.damage, this.targetTeam, target);
+
+            if (this.args?.burnDps) {
+                for (const t of world.actorsinRadius(this.x, this.y, blastRadius, this.targetTeam)) {
+                    t.applyBurn?.(this.args.burnDps, this.args.burnDuration);
+                }
+            }
+
+            world.spawnFx({
+                type: 'burst', x: this.x, y: this.y,
+                radius: blastRadius, color: this.color ?? '#c9570b',
+            });
             this.dead = true;
         },
 

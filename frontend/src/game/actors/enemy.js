@@ -80,15 +80,30 @@ export function createEnemy(type, wave) {
         type,
         color: base.color,
         angle: 0,
+
+        burn: null,
         dead: false,
+
+        applyBurn(dps, duration) {
+            if (!this.burn || dps >= this.burn.dps) {
+                this.burn = { dps, timer: duration };
+            } else {
+                this.burn.timer = Math.max(this.burn.timer, duration);
+            }
+        },
 
         update(dt, world) {
             if (this.spawnIn > 0) {
                 this.spawnIn -= Math.min(this.spawnIn, dt);
                 return;
             }
-
             if (!this.targetable) this.targetable = true;
+
+            if (this.burn) {
+                this.burn.timer -= dt;
+                this.hp -= Math.min(this.burn.dps * dt, this.hp);
+                if (this.burn.timer <= 0) this.burn = null;
+            }
 
             const target = world.nearestActor(this.x, this.y, TEAM.PLAYER);
             if (!target) return;

@@ -3,6 +3,7 @@ import { ENEMY_TYPE } from './actors/enemy.js';
 import { DRONE_STATE, DRONE_ORBIT_RADIUS, DRONE_REPAIR_RADIUS } from './actors/drone.js';
 import { TEAM } from './world.js';
 import { DROP_TYPE } from './drop.js';
+import { drawSpecializationGroundFx, drawSpecializationImpactFx, SPECIALIZATION_DEFS } from './specializations.js';
 
 export function drawBackground(ctx, width, height, camera) {
     ctx.clearRect(0, 0, width, height);
@@ -32,13 +33,19 @@ export function drawActors(ctx, camera, actors, canvasW, canvasH) {
 
     for (const actor of actors) {
         switch (actor.drawType) {
-            case 'player': drawPlayer(ctx, actor); break;
-            case 'engineer': drawEngineer(ctx, actor); break;
+            case 'player': drawPlayer(ctx, actor); drawSpecializationGroundFx(ctx, actor); break;
+            case 'engineer': drawEngineer(ctx, actor); drawSpecializationGroundFx(ctx, actor); break;
             case 'drone': drawDrone(ctx, actor, engineer); break;
             case 'enemy': drawEnemy(ctx, actor, canvasW, canvasH, camera); break;
             case 'bullet': drawBullet(ctx, actor); break;
             case 'pickup': drawPickup(ctx, actor); break;
             case 'aoeEffect': drawAoeEffect(ctx, actor); break;
+        }
+    }
+
+    for (const actor of actors) {
+        if (actor.drawType === 'player' || actor.drawType === 'engineer') {
+            drawSpecializationImpactFx(ctx, actor);
         }
     }
 
@@ -67,6 +74,10 @@ function drawPlayer(ctx, player) {
         ctx.textAlign = 'center';
         ctx.fillText(`${stacks}`, player.x, player.y - player.radius - 8);
         ctx.restore();
+    }
+
+    if (player.specialization) {
+        _drawSpecializationBadge(ctx, player, player.specialization);
     }
 }
 
@@ -101,6 +112,10 @@ function drawEngineer(ctx, eng) {
 
     ctx.restore();
 
+    if (eng.specialization) {
+        _drawSpecializationBadge(ctx, eng, eng.specialization);
+    }
+
     const nearRepairable = eng.drones?.some(d => {
         if (d.state === DRONE_STATE.WRECKED)
             return Math.hypot(d.x - eng.x, d.y - eng.y) <= DRONE_REPAIR_RADIUS * 2.5;
@@ -108,6 +123,7 @@ function drawEngineer(ctx, eng) {
             return Math.hypot(d.x - eng.x, d.y - eng.y) <= DRONE_REPAIR_RADIUS;
         return false;
     });
+
     if (nearRepairable) {
         ctx.save();
         ctx.beginPath();
@@ -282,6 +298,16 @@ function drawEnemy(ctx, enemy, canvasW, canvasH, camera) {
         ctx.fill();
         ctx.restore();
 
+        if (enemy.burn) {
+            ctx.save();
+            ctx.globalAlpha = 0.3 + 0.15 * Math.sin(Date.now() / 100);
+            ctx.fillStyle = '#e67e22';
+            ctx.beginPath();
+            ctx.ellipse(enemy.x, enemy.y, enemy.radius * 1.15, enemy.radius * 1.15, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
         if (enemy.hp < enemy.maxHp) {
             const barW = enemy.radius * 2.4;
             const barH = enemy.type === ENEMY_TYPE.BOSS ? 6 : 3;
@@ -306,7 +332,7 @@ function drawEnemy(ctx, enemy, canvasW, canvasH, camera) {
 
 export function drawBullet(ctx, bullet) {
     if (bullet.dead) return;
-    ctx.fillStyle = '#007b00';
+    ctx.fillStyle = bullet.color ?? '#007b00';
     ctx.beginPath();
     ctx.ellipse(
         bullet.x, bullet.y,
@@ -502,6 +528,67 @@ function _drawShieldRing(ctx, x, y, radius) {
     ctx.lineWidth = 2.5;
     ctx.globalAlpha = pulse;
     ctx.stroke();
+    ctx.restore();
+}
+
+export function drawWorldFx(ctx, camera, fxList) {
+    if (!fxList.length) return;
+    const scale = camera.scale ?? 1;
+    ctx.save();
+    ctx.scale(scale, scale);
+    ctx.translate(-camera.x, -camera.y);
+    for (const fx of fxList) {
+        if (fx.type === 'burst') _drawBurst(ctx, fx);
+    }
+    ctx.restore();
+}
+
+function _drawBurst(ctx, fx) {
+    const t = Math.min(1, fx.time / (fx.duration ?? 0.35));
+    ctx.save();
+    ctx.globalAlpha = (1 - t) * 0.55;
+    ctx.fillStyle = fx.color ?? '#c9570b';
+    ctx.beginPath();
+    ctx.arc(fx.x, fx.y, fx.radius * (0.3 + 0.7 * t), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = (1 - t) * 0.9;
+    ctx.strokeStyle = fx.color ?? '#c9570b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+}
+
+function _drawSpecializationBadge(ctx, actor, spec) {
+    const def = SPECIALIZATION_DEFS[spec.id];
+    if (!def) return;
+
+    const bx = actor.x + actor.radius * 0.75;
+    const by = actor.y - actor.radius * 0.75;
+    const r = 9;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#faf7f1';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = def.color;
+    ctx.stroke();
+
+    const cdRatio = spec.cooldown > 0 ? Math.min(1, spec.cooldownTime / spec.cooldown) : 0;
+    if (cdRatio > 0) {
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.arc(bx, by, r, -Math.PI / 2, -Math.PI / 2 + cdRatio * Math.PI * 2);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(42,35,24,0.35)';
+        ctx.fill();
+    }
+
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(def.icon, bx, by + 0.5);
     ctx.restore();
 }
 

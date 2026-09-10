@@ -4,12 +4,12 @@ import { createEngineer } from './actors/engineer.js';
 import { createEnemy, createWave, separateEnemies, BOSS_WAVE_INTERVAL, getWaveComposition, getWavePreview, getEnemyStatsAtWave } from './actors/enemy.js';
 import { DRONE_STATE } from './actors/drone.js';
 import { initInput, destroyInput, flushInput, input } from './input.js';
-import { drawBackground, drawActors } from './renderer.js';
+import { drawBackground, drawActors, drawWorldFx } from './renderer.js';
 import { WEAPON_ENCHANT } from './weapon.js';
 import {
     CHOICE_TYPE,
     getChoices, getEnchantChoices, getWeaponChoices, getBossRewardChoices,
-    getEngineerUpgradeChoices, getEngineerEnchantChoices,
+    getEngineerUpgradeChoices, getEngineerEnchantChoices, getSpecializationChoices,
 } from './choice.js';
 import { maybeDropLoot } from './drop.js';
 
@@ -73,6 +73,8 @@ const BASE_WIDTH = 700;
 
 const ENCHANT_WAVE_STANDARD = 20;
 const ENGINEER_ENCHANT_WAVES = [15, 30];
+const SPECIALIZATION_WAVE_STANDARD = 40;
+const SPECIALIZATION_WAVE_ENGINEER = 40;
 
 export function createEngine(canvas, onHUDUpdate) {
     const ctx = canvas.getContext('2d');
@@ -186,6 +188,7 @@ export function createEngine(canvas, onHUDUpdate) {
         }
 
         world.flushSpawns();
+        world.tickFx(dt);
 
         const enemies = world.actors.filter(
             a => a.team === TEAM.ENEMY && !a.dead && a.hp > 0
@@ -269,6 +272,8 @@ export function createEngine(canvas, onHUDUpdate) {
                     if (ENGINEER_ENCHANT_WAVES.includes(completedWave)) {
                         engineerEnchantWave += 1;
                         choiceType = CHOICE_TYPE.ENGINEER_ENCHANT;
+                    } else if (completedWave === SPECIALIZATION_WAVE_ENGINEER && !player.specialization) {
+                        choiceType = CHOICE_TYPE.SPECIALIZATION;
                     } else if (completedWave % BOSS_WAVE_INTERVAL === 0) {
                         choiceType = CHOICE_TYPE.BOSS_REWARD;
                     } else {
@@ -277,6 +282,8 @@ export function createEngine(canvas, onHUDUpdate) {
                 } else {
                     if (completedWave === ENCHANT_WAVE_STANDARD) {
                         choiceType = CHOICE_TYPE.ENCHANT;
+                    } else if (completedWave === SPECIALIZATION_WAVE_STANDARD && !player.specialization) {
+                        choiceType = CHOICE_TYPE.SPECIALIZATION;
                     } else if (completedWave % BOSS_WAVE_INTERVAL === 0) {
                         choiceType = CHOICE_TYPE.BOSS_REWARD;
                     }
@@ -304,6 +311,12 @@ export function createEngine(canvas, onHUDUpdate) {
     function _openChoiceScreen(type) {
         gameState = GAME_STATE.CHOICE;
         currentChoiceType = type;
+
+        if (type === CHOICE_TYPE.SPECIALIZATION) {
+            choices = getSpecializationChoices(player);
+            _emitHUD();
+            return;
+        }
 
         if (_isEngineer()) {
             switch (type) {
@@ -356,6 +369,7 @@ export function createEngine(canvas, onHUDUpdate) {
         _updateCamera();
         drawBackground(ctx, canvas.width, canvas.height, camera);
         drawActors(ctx, camera, world.actors, canvas.width, canvas.height);
+        drawWorldFx(ctx, camera, world.fx);
     }
 
     function _emitHUD() {

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SPECIALIZATION_DEFS } from '../game/specializations.js';
 import '../assets/style/components/Wiki.css';
 
 function ControlsTab() {
@@ -366,7 +367,56 @@ function AugmentsTab() {
     );
 }
 
-const TAB_IDS = ['controls', 'classes', 'enemies', 'pickups', 'weapons', 'augments'];
+function SpecializationsTab() {
+    const { t } = useTranslation();
+    const specs = Object.values(SPECIALIZATION_DEFS);
+
+    return (
+        <div className='wiki-body'>
+            <div className='wiki-desc' style={{ marginBottom: 14 }}>
+                {t('wiki.specializations.intro')}
+            </div>
+
+            {specs.map((spec, i) => (
+                <div
+                    key={spec.id}
+                    className='wiki-section'
+                    style={{
+                        paddingBottom: 12,
+                        borderBottom: i < specs.length - 1 ? '1px dashed var(--line)' : 'none',
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                        <span style={{ fontSize: '1.2rem' }}>{spec.icon}</span>
+                        <strong style={{ fontSize: '1.1rem', color: spec.color }}>
+                            {t(`wiki.specializations.${spec.id}.name`, { defaultValue: spec.name })}
+                        </strong>
+                    </div>
+
+                    <div className='wiki-desc' style={{ marginBottom: 8 }}>
+                        {t(`wiki.specializations.${spec.id}.desc`, { defaultValue: spec.description })}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {spec.props.map(prop => (
+                            <span
+                                className='wiki-key'
+                                key={prop}
+                                style={{ fontSize: '0.8rem', borderLeft: `3px solid ${spec.color}` }}
+                            >
+                                {t(`game.choiceProps.${prop}`, { defaultValue: prop })}: {spec.baseState[prop]}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            ))}
+
+            <div className='wiki-tip'>{t('wiki.specializations.tip')}</div>
+        </div>
+    );
+}
+
+const TAB_IDS = ['controls', 'classes', 'enemies', 'pickups', 'weapons', 'augments', 'specializations'];
 const TAB_COMPONENTS = {
     controls: ControlsTab,
     classes: ClassesTab,
@@ -374,6 +424,7 @@ const TAB_COMPONENTS = {
     pickups: PickupsTab,
     weapons: WeaponsTab,
     augments: AugmentsTab,
+    specializations: SpecializationsTab,
 };
 
 export function WikiHelp() {

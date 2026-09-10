@@ -2,6 +2,8 @@ import { TEAM } from '../world.js';
 import { WEAPON_TYPE, WEAPON_ENCHANT } from '../weapon.js';
 import { createDrone, DRONE_STATE, DRONE_ORBIT_RADIUS, DRONE_REPAIR_RADIUS, tickOrbitPhase } from './drone.js';
 import { tickItems } from '../drop.js';
+import { updateSpecialization } from '../specializations.js';
+
 
 const DRONE_LOADOUTS = [
     { type: WEAPON_TYPE.RANGE, enchant: WEAPON_ENCHANT.SINGLE },
@@ -43,6 +45,8 @@ export function createEngineer(canvasWidth, canvasHeight) {
         weapon: undefined,
         items: [],
         drones,
+        specialization: null,
+
         dead: false,
 
         selectedDroneIndex: -1,
@@ -56,6 +60,7 @@ export function createEngineer(canvasWidth, canvasHeight) {
             this._faceNearestEnemy(world);
             tickItems(this, dt, world);
             this._updateDrones(dt, world, inputState);
+            updateSpecialization(this, dt, world);
         },
 
         _move(dt, input) {

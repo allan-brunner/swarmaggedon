@@ -233,6 +233,9 @@ function Game() {
       case CHOICE_TYPE.ENGINEER_ENCHANT:
         choice.func(hud.player, { enchant: choice.enchant, droneType: choice.droneType });
         break;
+      case CHOICE_TYPE.SPECIALIZATION:
+        choice.func(choice.arg);
+        break;
       default:
         if (choice.func) choice.func(choice.arg, choice.bonus ?? choice.wpn ?? choice.enchant);
     }
@@ -285,7 +288,7 @@ function Game() {
           <div className="overlay choice">
             <WaveStatsPanel recap={hud.waveRecap} preview={hud.wavePreview} />
             <span className="choice-title">
-              {t('game.chooseAugment')}
+              {hud.choices[0]?.type === CHOICE_TYPE.SPECIALIZATION ? t('game.chooseSpecialization') : hud.choices[0]?.type === CHOICE_TYPE.ENCHANT ? t('game.chooseEnchant') : t('game.chooseAugment')}
             </span>
             <div className="choice-list">
               {hud.choices.map((choice) => (
@@ -298,7 +301,7 @@ function Game() {
                   <span className="choice-rarity" style={{ backgroundColor: choice.rarityColor }}>
                     {tRarity(choice.rarityName)}
                   </span>
-                  <img className="choice-img" src={choice.icon || 'temp.png'} alt="icon" />
+                  <img className="choice-img" src={choice.icon || 'temp.png'} alt={choice.icon || 'icon'} />
 
                   {/* Standard augment */}
                   {(choice.type === CHOICE_TYPE.AUGMENT || choice.type === CHOICE_TYPE.BOSS_REWARD) && (
@@ -420,6 +423,25 @@ function Game() {
                           })}
                         </div>
                       )}
+                    </>
+                  )}
+
+                  {choice.type === CHOICE_TYPE.SPECIALIZATION && (
+                    <>
+                      <span className="choice-attr" style={{ color: choice.color }}>
+                        {t(`game.specializations.${choice.specId}.name`, { defaultValue: choice.attr })}
+                      </span>
+                      <div style={{ fontSize: 'clamp(11px, 1.7vw, 14px)', color: '#5a5040', textAlign: 'center', lineHeight: 1.3, margin: '4px 0 6px' }}>
+                        {t(`game.specializations.${choice.specId}.description`, { defaultValue: choice.description })}
+                      </div>
+                      <div className="choice-stats-container weapon">
+                        {choice.stats.map(s => (
+                          <div className="choice-wpn-attr" key={s.key}>
+                            <span className="choice-wpn-attr-title">{s.key}</span>
+                            <span className="choice-wpn-attr-value">{s.value}</span>
+                          </div>
+                        ))}
+                      </div>
                     </>
                   )}
                 </div>

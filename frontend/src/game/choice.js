@@ -1,4 +1,5 @@
 import { createEnchant, createWeapon, enchantWeapon, WEAPON_ENCHANT, WEAPON_TYPE } from './weapon.js';
+import { SPECIALIZATION_DEFS, createSpecialization } from './specializations.js';
 
 export const CHOICE_TYPE = {
     AUGMENT: 'augment',
@@ -8,6 +9,7 @@ export const CHOICE_TYPE = {
     BOSS_REWARD: 'boss_reward',
     ENGINEER_UPGRADE: 'engineer_upgrade',
     ENGINEER_ENCHANT: 'engineer_enchant',
+    SPECIALIZATION: 'specialization',
 }
 
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
@@ -104,6 +106,10 @@ function _buildAugmentChoices(wave, player, minRarity) {
             possibleChoices.push(_pct('detonateRadius', wpn, 'detonateRadius', 5, 12));
             possibleChoices.push(_pct('detonateDamage', wpn, 'detonateDamage', 8, 15));
         }
+    }
+
+    if (player.specialization) {
+        possibleChoices.push(..._specializationAugments(player.specialization));
     }
 
     return _buildChoices(possibleChoices, CHOICE_TYPE.AUGMENT, minRarity);
@@ -212,6 +218,7 @@ export function getEngineerUpgradeChoices(wave, engineer, minRarity = 'COMMON') 
             { attr: 'meleeFireRate', getBonus: (r) => getTieredBonus(-12, -6, r.name), getCurr: () => melee.cooldown, getNew: (b) => parseFloat((melee.cooldown * (1 + b / 100)).toFixed(2)), func: (b) => engineer.buffDrones('cooldown', 1 + b / 100, WEAPON_TYPE.MELEE) },
             { attr: 'meleeRange', getBonus: (r) => getTieredBonus(8, 14, r.name), getCurr: () => melee.range, getNew: (b) => parseFloat((melee.range * (1 + b / 100)).toFixed(1)), func: (b) => engineer.buffDrones('range', 1 + b / 100, WEAPON_TYPE.MELEE) },
         ] : []),
+        ...(engineer.specialization ? _specializationEngineerAugments(engineer.specialization) : []),
     ];
 
     return possibleChoices
@@ -304,6 +311,81 @@ export function getEngineerEnchantChoices(wave, engineer, enchantWave) {
             },
         };
     });
+}
+
+export function getSpecializationChoices(player) {
+    const ids = Object.keys(SPECIALIZATION_DEFS)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3);
+
+    return ids.map((id, index) => {
+        const def = SPECIALIZATION_DEFS[id];
+        return {
+            id: index,
+            specId: id,
+            attr: def.name,
+            icon: def.icon,
+            color: def.color,
+            rarityName: RARITIES.LEGENDARY.name,
+            rarityColor: def.color,
+            description: def.description,
+            stats: def.props.map(p => ({ key: p, value: def.baseState[p] })),
+            type: CHOICE_TYPE.SPECIALIZATION,
+            arg: player,
+            func: (p) => { p.specialization = createSpecialization(id); },
+        };
+    });
+}
+
+function _specializationAugments(spec) {
+    switch (spec.id) {
+        case 'assassin':
+            return [
+                _pct('cloneDamage', spec, 'damage', 10, 18),
+                _pct('cloneCooldown', spec, 'cooldown', -12, -6),
+            ];
+        case 'fire_wizard':
+            return [
+                _pct('fireballDamage', spec, 'damage', 10, 16),
+                _pct('burnDamage', spec, 'burnDps', 10, 18),
+                _pct('fireballCooldown', spec, 'cooldown', -10, -5),
+                _pct('blastRadius', spec, 'aoeRadius', 6, 12),
+            ];
+        case 'electric_wizard':
+            return [
+                _pct('boltDamage', spec, 'damage', 10, 16),
+                _pct('strikeCooldown', spec, 'cooldown', -10, -5),
+                {
+                    attr: 'extraStrike',
+                    getBonus: (r) => r.name === 'Legendary' ? 3 : r.name === 'Epic' ? 2 : 1,
+                    arg: spec,
+                    getCurr: (a) => a.strikes,
+                    getNew: (a, b) => a.strikes + b,
+                    func: (a, b) => { a.strikes += b; },
+                },
+            ];
+        case 'salamander':
+            return [
+                _pct('lakeDamage', spec, 'dps', 10, 18),
+                _pct('lakeRadius', spec, 'radius', 6, 12),
+                _pct('lakeDuration', spec, 'duration', 8, 15),
+                _pct('lakeCooldown', spec, 'cooldown', -10, -5),
+            ];
+        default:
+            return [];
+    }
+}
+
+function _specializationEngineerAugments(spec) {
+    return _specializationAugments(spec).map(c => ({
+        attr: c.attr,
+        getBonus: c.getBonus,
+        rarityName: RARITIES.LEGENDARY.name,
+        rarityColor: c.color,
+        getCurr: () => c.getCurr(c.arg),
+        getNew: (b) => c.getNew(c.arg, b),
+        func: (b) => c.func(c.arg, b),
+    }));
 }
 
 function _pct(attr, arg, prop, baseMin, baseMax) {

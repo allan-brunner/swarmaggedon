@@ -43,14 +43,26 @@
 
 .wiki-tabs {
     display: flex;
+    flex-wrap: nowrap;
     gap: 0;
     overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) var(--paper3);
 }
 
 .wiki-tabs::-webkit-scrollbar {
-    display: none;
+    height: 5px;
+}
+
+.wiki-tabs::-webkit-scrollbar-track {
+    background: var(--paper3);
+}
+
+.wiki-tabs::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 2px;
 }
 
 .wiki-tab {

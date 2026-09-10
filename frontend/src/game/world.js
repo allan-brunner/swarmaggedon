@@ -5,6 +5,15 @@ export const TEAM = {
     ENEMY: 'enemy',
 };
 
+const fx = [];
+function spawnFx(entry) { fx.push({ time: 0, ...entry }); }
+function tickFx(dt) {
+    for (let i = fx.length - 1; i >= 0; i--) {
+        fx[i].time += dt;
+        if (fx[i].time >= (fx[i].duration ?? 0.35)) fx.splice(i, 1);
+    }
+}
+
 export function createWorld() {
     const actors = [];
     const toSpawn = [];
@@ -124,6 +133,10 @@ export function createWorld() {
         recordDamage,
         recordKill,
         resetWaveStats,
+
+        fx,
+        spawnFx,
+        tickFx,
 
         emit,
         flushEvents,
