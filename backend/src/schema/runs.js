@@ -2,7 +2,6 @@ import { gql } from 'graphql-tag'
 import { COLLECTION_USERS, COLLECTION_FRIENDS, COLLECTION_RUNS, getDB } from '../config/db.js'
 import { ObjectId } from 'mongodb'
 import { checkScoreValidity, setCheater } from '../utils.js'
-import { computeUserStats } from './stats.js'
 import { checkAndUnlockAchievements } from '../achievements/service.js'
 
 export const runTypeDefs = gql`
@@ -83,7 +82,6 @@ export const runResolvers = {
 
             if (!result) return { message: "Unknown error while inserting", newAchievements: [] }
 
-            const stats = await computeUserStats(user.id)
             const newAchievements = await checkAndUnlockAchievements(user.id, stats)
 
             return { message: "Inserted new run", newAchievements }
