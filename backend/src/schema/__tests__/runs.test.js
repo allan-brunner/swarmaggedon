@@ -22,8 +22,17 @@ jest.unstable_mockModule('../../utils.js', () => ({
     setCheater: jest.fn()
 }));
 
+jest.unstable_mockModule('../stats.js', () => ({
+    computeUserStats: jest.fn().mockResolvedValue({})
+}));
+
+jest.unstable_mockModule('../../achievements/service.js', () => ({
+    checkAndUnlockAchievements: jest.fn().mockResolvedValue([])
+}));
+
 const { runResolvers } = await import('../runs.js');
 const { checkScoreValidity, setCheater } = await import('../../utils.js');
+const { checkAndUnlockAchievements } = await import('../../achievements/service.js');
 
 describe('Runs GraphQL Resolvers', () => {
 
@@ -51,7 +60,8 @@ describe('Runs GraphQL Resolvers', () => {
 
             const result = await runResolvers.Mutation.addRun(null, validArgs, validContext);
 
-            expect(result).toBe("Inserted new run");
+            expect(result.message).toBe("Inserted new run");
+            expect(result.newAchievements).toEqual([]);
             expect(mockInsertOne).toHaveBeenCalledWith(expect.objectContaining({
                 user_id: 'user123',
                 score: 100,
@@ -59,6 +69,15 @@ describe('Runs GraphQL Resolvers', () => {
                 wave: 5,
                 kills: 20
             }));
+        });
+
+        it('should surface newly unlocked achievements', async () => {
+            checkScoreValidity.mockReturnValue(true);
+            mockInsertOne.mockResolvedValue({ acknowledged: true, insertedId: 'run123' });
+            checkAndUnlockAchievements.mockResolvedValueOnce(['first_blood', 'wave_10']);
+
+            const result = await runResolvers.Mutation.addRun(null, validArgs, validContext);
+            expect(result.newAchievements).toEqual(['first_blood', 'wave_10']);
         });
 
         it('should trigger anti-cheat and throw if values are negative', async () => {

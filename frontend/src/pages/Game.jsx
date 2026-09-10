@@ -9,14 +9,17 @@ import { useAuth } from '../context/AuthContext';
 import { WEAPON_TYPE, WEAPON_ENCHANT } from '../game/weapon';
 import { CHOICE_TYPE } from '../game/choice';
 import NavBar from '../components/NavBar';
-import { PatchNotes } from '../components/PatchNotes';
 import { useTranslation } from 'react-i18next';
 import MobileControls from '../components/MobileControls';
 import WaveStatsPanel from '../components/WaveStatsPanel';
+import { useAchievements } from '../context/AchievementsContext';
 
 const MUTATION_ADD_RUN = gql`
   mutation AddRun($score: Int!, $duration: Int!, $wave: Int!, $kills: Int!) {
-    addRun(score: $score, duration: $duration, wave: $wave, kills: $kills)
+    addRun(score: $score, duration: $duration, wave: $wave, kills: $kills) {
+      message
+      newAchievements
+    }
   }
 `;
 
@@ -125,6 +128,7 @@ function ClassSelectOverlay({ onSelect }) {
 function Game() {
   const { t } = useTranslation();
   const { isLoggedIn, user } = useAuth();
+  const { notify } = useAchievements();
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const navigate = useNavigate();
@@ -137,7 +141,7 @@ function Game() {
     hudRawRef.current = { ...hudRawRef.current, ...data };
     if (data.gameState === 'game_over') {
       try {
-        await addRun({
+        const { data: result } = await addRun({
           variables: {
             score: data.score,
             duration: Math.round(data.elapsed),
@@ -145,11 +149,12 @@ function Game() {
             kills: data.kills,
           },
         });
+        notify(result?.addRun?.newAchievements);
       } catch (err) {
         console.error('Error while sending run data', err);
       }
     }
-  }, [addRun]);
+  }, [addRun, notify]);
 
   useEffect(() => {
     const id = setInterval(() => setHud({ ...hudRawRef.current }), 66);

@@ -1,0 +1,75 @@
+.achievement-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #faf7f1;
+    border: 2.5px solid var(--ink);
+    border-radius: 4px;
+    box-shadow: 4px 4px 0 var(--ink);
+    padding: 10px 18px 10px 10px;
+    max-width: min(90vw, 420px);
+    cursor: pointer;
+    animation:
+        achievementDrop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both,
+        achievementLeave 0.3s ease-in 4.7s both;
+}
+
+@keyframes achievementDrop {
+    from { opacity: 0; transform: translate(-50%, -16px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes achievementLeave {
+    from { opacity: 1; }
+    to   { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+.achievement-toast-icon {
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: var(--paper3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.achievement-toast-body {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+}
+
+.achievement-toast-eyebrow {
+    font-family: 'Patrick Hand';
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+
+.achievement-toast-name {
+    font-family: 'Patrick Hand';
+    font-size: 20px;
+    color: var(--ink);
+}
+
+.achievement-toast-desc {
+    font-size: 13px;
+    color: var(--ink-mid);
+}
+
+@media (max-width: 500px) {
+    .achievement-toast { top: 10px; padding: 8px 14px 8px 8px; }
+    .achievement-toast-icon { width: 38px; height: 38px; font-size: 20px; }
+    .achievement-toast-name { font-size: 17px; }
+    .achievement-toast-desc { font-size: 12px; }
+}
