@@ -60,9 +60,8 @@ const REMOVE_FRIEND = gql`
   }
 `;
 
-const { notify } = useAchievements();
-
 const Friends = () => {
+  const { notify } = useAchievements();
   const { t } = useTranslation();
   const { isLoggedIn, user, loading: authLoading } = useAuth();
   const {

@@ -97,9 +97,8 @@ const REMOVE_FRIEND = gql`
   }
 `;
 
-const { notify } = useAchievements();
-
 export default function Profile() {
+  const { notify } = useAchievements();
   const { t } = useTranslation();
   const { username } = useParams();
   const { user: loggedInUser, isLoggedIn, loading: authLoading } = useAuth();
