@@ -82,7 +82,7 @@ export const runResolvers = {
 
             if (!result) return { message: "Unknown error while inserting", newAchievements: [] }
 
-            const newAchievements = await checkAndUnlockAchievements(user.id, stats)
+            const newAchievements = await checkAndUnlockAchievements(user.id)
 
             return { message: "Inserted new run", newAchievements }
         }
