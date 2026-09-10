@@ -448,7 +448,7 @@ function Game() {
               ))}
             </div>
 
-            {hud.rerollsLeft > 0 && hud.wave > 0 && (
+            {choice.type !== CHOICE_TYPE.WEAPON && hud.rerollsLeft > 0 && hud.wave > 0 && (
               <div style={{ marginTop: '30px', textAlign: 'center' }}>
                 <button className="menu-btn" onClick={() => engineRef.current.rerollChoice()}>
                   Reroll Choices ({hud.rerollsLeft} left)
