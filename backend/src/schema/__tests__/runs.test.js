@@ -22,10 +22,6 @@ jest.unstable_mockModule('../../utils.js', () => ({
     setCheater: jest.fn()
 }));
 
-jest.unstable_mockModule('../stats.js', () => ({
-    computeUserStats: jest.fn().mockResolvedValue({})
-}));
-
 jest.unstable_mockModule('../../achievements/service.js', () => ({
     checkAndUnlockAchievements: jest.fn().mockResolvedValue([])
 }));

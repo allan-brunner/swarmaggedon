@@ -58,22 +58,10 @@
       "brawler": {
         "name": "Brawler ⚔️",
         "stats": [
-          [
-            "HP",
-            "100"
-          ],
-          [
-            "Speed",
-            "180"
-          ],
-          [
-            "Weapon",
-            "Melee only"
-          ],
-          [
-            "Playstyle",
-            "Aggressive"
-          ]
+          ["HP", "100"],
+          ["Speed", "180"],
+          ["Weapon", "Melee only"],
+          ["Playstyle", "Aggressive"]
         ],
         "desc": "Starts with a melee weapon pick. Fights at close range — high risk, high reward. Pairs best with cooldown and damage augments to chain kills quickly.",
         "tip": "Stay mobile. Melee weapons have small arcs, so positioning matters more than for rangers."
@@ -81,22 +69,10 @@
       "ranger": {
         "name": "Ranger 🔫",
         "stats": [
-          [
-            "HP",
-            "100"
-          ],
-          [
-            "Speed",
-            "180"
-          ],
-          [
-            "Weapon",
-            "Ranged only"
-          ],
-          [
-            "Playstyle",
-            "Kiting"
-          ]
+          ["HP", "100"],
+          ["Speed", "180"],
+          ["Weapon", "Ranged only"],
+          ["Playstyle", "Kiting"]
         ],
         "desc": "Starts with a ranged weapon pick. Easiest class to learn — you can deal damage while retreating. Pairs well with bullet speed, range, and AoE enchants.",
         "tip": "Kite in wide circles. Shooters will try to orbit you at mid range — keep moving to break their rhythm."
@@ -104,22 +80,10 @@
       "engineer": {
         "name": "Engineer 🤖",
         "stats": [
-          [
-            "HP",
-            "160"
-          ],
-          [
-            "Speed",
-            "210"
-          ],
-          [
-            "Weapon",
-            "4 drones"
-          ],
-          [
-            "Playstyle",
-            "Strategic"
-          ]
+          ["HP", "160"],
+          ["Speed", "210"],
+          ["Weapon", "4 drones"],
+          ["Playstyle", "Strategic"]
         ],
         "desc": "Has no personal weapon — four drones fight for you. Two are ranged, two are melee. Survives by managing drone placement, repairs, and wave resets. Upgrades between waves buff your drones and yourself directly instead of picking weapons.",
         "droneTitle": "Drone controls",
@@ -166,36 +130,22 @@
     "enemies": {
       "runner": {
         "name": "Runner",
-        "tags": [
-          "fast",
-          "fragile"
-        ],
+        "tags": ["fast", "fragile"],
         "desc": "Rushes directly at you. Low HP but high speed — dangerous in groups. Appears every wave from wave 1."
       },
       "brute": {
         "name": "Brute",
-        "tags": [
-          "slow",
-          "tanky",
-          "heavy hit"
-        ],
+        "tags": ["slow", "tanky", "heavy hit"],
         "desc": "Slow melee fighter with high HP and massive damage per swing. Appears from wave 4."
       },
       "shooter": {
         "name": "Shooter",
-        "tags": [
-          "ranged",
-          "kites"
-        ],
+        "tags": ["ranged", "kites"],
         "desc": "Maintains distance and fires projectiles. Tries to orbit you at ideal range. Appears from wave 5."
       },
       "boss": {
         "name": "Boss",
-        "tags": [
-          "wave 10, 20…",
-          "laser",
-          "bonus reward"
-        ],
+        "tags": ["wave 10, 20…", "laser", "bonus reward"],
         "desc": "Giant enemy with a long-range laser beam. Appears every 10 waves alongside a pack of Runners. Killing it grants a Boss Reward choice screen."
       }
     },
@@ -203,40 +153,27 @@
       "intro": "Ennemies have a chance to drop pickup items that can be really useful!",
       "healthPotion": {
         "name": "Health potion",
-        "tags": [
-          "Instant"
-        ],
+        "tags": ["Instant"],
         "desc": "Instantly restore 20% of max heatlh."
       },
       "damagePotion": {
         "name": "Damage potion",
-        "tags": [
-          "buff",
-          "Short duration"
-        ],
+        "tags": ["buff", "Short duration"],
         "desc": "Double damages for a short duration."
       },
       "shield": {
         "name": "Shield",
-        "tags": [
-          "buff",
-          "Short duration"
-        ],
+        "tags": ["buff", "Short duration"],
         "desc": "Prevent any damages for a short duration."
       },
       "grenade": {
         "name": "Grenade",
-        "tags": [
-          "active",
-          "Cooldown"
-        ],
+        "tags": ["active", "Cooldown"],
         "desc": "After 3 seconds, fire a grenade to the nearest enemy dealing area on effect damages."
       },
       "undying": {
         "name": "Phoenix charm",
-        "tags": [
-          "passive"
-        ],
+        "tags": ["passive"],
         "desc": "Prevent fatal death and give back a percentage of max health (unique usage)."
       }
     },
@@ -295,14 +232,8 @@
           "Max HP",
           "Increases your maximum health. Also keeps current HP ratio."
         ],
-        "damage": [
-          "Damage",
-          "Multiplies weapon damage output."
-        ],
-        "range": [
-          "Range",
-          "Extends weapon effective range."
-        ],
+        "damage": ["Damage", "Multiplies weapon damage output."],
+        "range": ["Range", "Extends weapon effective range."],
         "moveSpeed": [
           "Move Speed",
           "Increases your movement speed. Very strong — mobility is survival."
@@ -315,18 +246,9 @@
           "Bullet Speed",
           "How fast projectiles travel (ranged only)."
         ],
-        "aoeRadius": [
-          "AoE Radius",
-          "Explosion size for AoE enchant."
-        ],
-        "pierce": [
-          "Pierce",
-          "Number of targets pierced (Pierce enchant)."
-        ],
-        "laserWidth": [
-          "Laser Width",
-          "Beam thickness (Laser enchant)."
-        ],
+        "aoeRadius": ["AoE Radius", "Explosion size for AoE enchant."],
+        "pierce": ["Pierce", "Number of targets pierced (Pierce enchant)."],
+        "laserWidth": ["Laser Width", "Beam thickness (Laser enchant)."],
         "chainRadius": [
           "Chain Radius",
           "How far chain lightning jumps (Chain enchant)."
@@ -762,6 +684,58 @@
       "dedicated_50": {
         "name": "Committed",
         "desc": "Play 50 games."
+      },
+      "wave_75": {
+        "name": "Overachiever",
+        "desc": "Reach wave 75 in a single run."
+      },
+      "wave_100": {
+        "name": "Century",
+        "desc": "Reach wave 100 in a single run."
+      },
+      "boss_legend": { 
+        "name": "Boss Legend", 
+        "desc": "Defeat 25 bosses." 
+      },
+      "kills_100000": {
+        "name": "Annihilator",
+        "desc": "Reach 100,000 total kills."
+      },
+      "survive_1h": {
+        "name": "Endless Grind",
+        "desc": "Survive 1 hour in a single run."
+      },
+      "score_500k": {
+        "name": "Sharpshooter",
+        "desc": "Reach a high score of 500,000."
+      },
+      "score_1m": {
+        "name": "Untouchable",
+        "desc": "Reach a high score of 1,000,000."
+      },
+      "lifetime_1m": {
+        "name": "Millionaire",
+        "desc": "Earn 1,000,000 points across all your runs."
+      },
+      "consistent": {
+        "name": "Steady Hand",
+        "desc": "Average wave 15+ over at least 10 runs."
+      },
+      "grizzled": {
+        "name": "Grizzled Veteran",
+        "desc": "Complete 5 runs past wave 20."
+      },
+      "dedicated_100": { 
+        "name": "No Days Off",
+        "desc": "Play 100 games." 
+        },
+      "social_first_friend": {
+        "name": "Making Friends",
+        "desc": "Add your first friend."
+      },
+      "social_squad": { 
+        "name": "Squad Goals", 
+        "desc": "Have 5 friends." 
       }
     }
   }

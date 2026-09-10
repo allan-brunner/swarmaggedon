@@ -1,422 +1,548 @@
-import { gql } from 'graphql-tag'
-import { COLLECTION_USERS, COLLECTION_FRIENDS, COLLECTION_RUNS, getDB } from '../config/db.js'
-import { ObjectId } from 'mongodb'
-import jwt from 'jsonwebtoken'
-import bcrypt from 'bcrypt'
-import { checkOnlyAlphanumeric, checkProfanity } from '../utils.js'
+import { gql } from "graphql-tag";
+import {
+  COLLECTION_USERS,
+  COLLECTION_FRIENDS,
+  COLLECTION_RUNS,
+  getDB,
+} from "../config/db.js";
+import { ObjectId } from "mongodb";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import { checkOnlyAlphanumeric, checkProfanity } from "../utils.js";
+import { checkAndUnlockAchievements } from "../achievements/service.js";
 
 export const userTypeDefs = gql`
-    type User {
-        id: ID!
-        username: String!
-        email: String,
-        last_online: Float
-        rank: Int
-        in_game: Boolean
-        is_friend: Boolean
-        date_created: Float!
-    }
-    
-    extend type Query {
-        # returns logged in user info
-        me: User
+  type User {
+    id: ID!
+    username: String!
+    email: String
+    last_online: Float
+    rank: Int
+    in_game: Boolean
+    is_friend: Boolean
+    date_created: Float!
+  }
 
-        # returns other user info
-        user_by_id(id: ID!): User
+  type AddFriendResult {
+    message: String!
+    newAchievements: [ID!]!
+  }
 
-        friends: [User]
+  extend type Query {
+    # returns logged in user info
+    me: User
 
-        pending_incoming_requests: [User]
-        pending_outgoing_requests: [User]
+    # returns other user info
+    user_by_id(id: ID!): User
 
-        search(usernameSearch: String!): [User]
+    friends: [User]
 
-        user_by_username(username: String!): User
-    }
+    pending_incoming_requests: [User]
+    pending_outgoing_requests: [User]
 
-    extend type Mutation {
-        addFriend(userId: ID!): String
-        deleteFriend(userId: ID!): String
-        changeUsername(newUsername: String!): String
-        changePassword(oldPassword: String!, newPassword: String!): String
-        deleteAccount: String
-    }
-`
+    search(usernameSearch: String!): [User]
+
+    user_by_username(username: String!): User
+  }
+
+  extend type Mutation {
+    addFriend(userId: ID!): AddFriendResult
+    deleteFriend(userId: ID!): String
+    changeUsername(newUsername: String!): String
+    changePassword(oldPassword: String!, newPassword: String!): String
+    deleteAccount: String
+  }
+`;
 
 export const userResolvers = {
-    Query: {
-        // parent, args, context
-        me: async (_, __, { res, user }) => {
-            // must be authenticated
-            if (!user) throw new Error("You are not logged in")
+  Query: {
+    // parent, args, context
+    me: async (_, __, { res, user }) => {
+      // must be authenticated
+      if (!user) throw new Error("You are not logged in");
 
-            const user_data = await getDB().collection(COLLECTION_USERS).findOneAndUpdate(
-                { _id: new ObjectId(user.id) },
-                { $set: { last_online: Date.now() } },
-                { returnDocument: 'after' }
-            )
+      const user_data = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOneAndUpdate(
+          { _id: new ObjectId(user.id) },
+          { $set: { last_online: Date.now() } },
+          { returnDocument: "after" },
+        );
 
-            // JWT
-            const token = jwt.sign({id: user_data._id.toString(), email: user_data.email}, process.env.JWT_SECRET, {expiresIn: '7d'})
+      // JWT
+      const token = jwt.sign(
+        { id: user_data._id.toString(), email: user_data.email },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" },
+      );
 
-            res.cookie('auth_token', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            });
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
 
-            return {
-                id: user_data._id,
-                username: user_data.username,
-                email: user_data.email,
-                date_created: user_data.date_created
-            }
-        },
-        // old /user/:id
-        user_by_id: async (_, {id}, {user: loggedin_user}) => {
-            // check if id is valid for mongodb
-            if (!ObjectId.isValid(id)) throw new Error("Invalid User ID format");
-            if (!loggedin_user) throw new Error("You are not logged in")
+      return {
+        id: user_data._id,
+        username: user_data.username,
+        email: user_data.email,
+        date_created: user_data.date_created,
+      };
+    },
+    // old /user/:id
+    user_by_id: async (_, { id }, { user: loggedin_user }) => {
+      // check if id is valid for mongodb
+      if (!ObjectId.isValid(id)) throw new Error("Invalid User ID format");
+      if (!loggedin_user) throw new Error("You are not logged in");
 
-            // retrieve specified user basic data
-            const user = await getDB().collection(COLLECTION_USERS).findOne({
-                _id: new ObjectId(id)
-            })
+      // retrieve specified user basic data
+      const user = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOne({
+          _id: new ObjectId(id),
+        });
 
-            if (!user) return {}
+      if (!user) return {};
 
-            // retrieve friend status
-            const friend_status = await getDB().collection(COLLECTION_FRIENDS).findOne({
-                $or: [
-                    { requester_id: loggedin_user.id, accepter_id: user._id.toString() },
-                    { requester_id: user._id.toString(), accepter_id: loggedin_user.id }
+      // retrieve friend status
+      const friend_status = await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .findOne({
+          $or: [
+            {
+              requester_id: loggedin_user.id,
+              accepter_id: user._id.toString(),
+            },
+            {
+              requester_id: user._id.toString(),
+              accepter_id: loggedin_user.id,
+            },
+          ],
+          pending: false,
+        });
+      return {
+        id: user._id,
+        username: user.username,
+        is_friend: !!friend_status,
+        last_online: user.last_online,
+        in_game: user.in_game,
+        date_created: user.date_created,
+      };
+    },
+    friends: async (_, __, { user: loggedin_info }) => {
+      if (!loggedin_info) throw new Error("You are not logged in");
+      return await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .aggregate([
+          {
+            $match: {
+              $or: [
+                { requester_id: loggedin_info.id },
+                { accepter_id: loggedin_info.id },
+              ],
+              pending: false,
+            },
+          },
+          {
+            $addFields: {
+              friend_id: {
+                $cond: [
+                  { $eq: ["$requester_id", loggedin_info.id] },
+                  "$accepter_id",
+                  "$requester_id",
                 ],
-                pending: false
-            })
-            return {
-                id: user._id,
-                username: user.username,
-                is_friend: !!friend_status,
-                last_online: user.last_online,
-                in_game: user.in_game,
-                date_created: user.date_created
-            }
-        },
-        friends: async (_, __, {user: loggedin_info}) => {
-            if (!loggedin_info) throw new Error("You are not logged in")
-            return await getDB().collection(COLLECTION_FRIENDS).aggregate([
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: COLLECTION_USERS,
+              let: { fid: "$friend_id" },
+              pipeline: [
                 {
-                    $match: {
-                        $or: [
-                            { requester_id: loggedin_info.id },
-                            { accepter_id: loggedin_info.id }
-                        ],
-                        pending: false
-                    }
+                  $match: { $expr: { $eq: [{ $toString: "$_id" }, "$$fid"] } },
                 },
                 {
-                    $addFields: {
-                        friend_id: {
-                            $cond: [
-                                { $eq: ["$requester_id", loggedin_info.id] },
-                                "$accepter_id",
-                                "$requester_id"
-                            ]
-                        }
-                    }
+                  $project: {
+                    username: 1,
+                    last_online: 1,
+                    in_game: 1,
+                    date_created: 1,
+                  },
                 },
-                {
-                    $lookup: {
-                        from: COLLECTION_USERS,
-                        let: { fid: "$friend_id" },
-                        pipeline: [
-                            { $match: { $expr: { $eq: [{ $toString: "$_id" }, "$$fid"] } } },
-                            { $project: { username: 1, last_online: 1, in_game: 1, date_created: 1 } }
-                        ],
-                        as: "user"
-                    }
-                },
-                { $unwind: "$user" },
-                {
-                    $project: {
-                        _id: 0,
-                        id: "$user._id",
-                        username: "$user.username",
-                        last_online: "$user.last_online",
-                        in_game: "$user.in_game",
-                        date_created: "$user.date_created"
-                    }
-                }
-            ]).toArray()
-        },
-        search: async (_, {usernameSearch}, { user: loggedin_info }) => {
-            if (!loggedin_info) throw new Error("You are not logged in")
-
-            const escaped = usernameSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-            
-            if (!usernameSearch || !escaped) throw new Error("You must give a search keyword")
-
-            // Find all relationships initiated by the current user
-            const initiatedRelations = await getDB().collection(COLLECTION_FRIENDS).find({
-                requester_id: loggedin_info.id
-            }).toArray()
-
-            const excludedIds = initiatedRelations.map(rel => new ObjectId(rel.accepter_id))
-            excludedIds.push(new ObjectId(loggedin_info.id))
-                
-            const results = await getDB().collection(COLLECTION_USERS).find({
-                "username": { $regex: escaped, $options: 'i' },
-                _id: { $nin: excludedIds }
-            }, {
-                projection: {
-                    _id: 1,
-                    username: 1
-                }
-            }).limit(10).toArray()
-            
-            const formattedResults = results.map(user => ({
-                id: user._id,
-                username: user.username
-            }))
-        
-            return formattedResults
-        },
-        pending_incoming_requests: async (_, __, {user: loggedin_info}) => {
-            if (!loggedin_info) throw new Error("You are not logged in")
-            return await getDB().collection(COLLECTION_FRIENDS).aggregate([
-                { $match: { accepter_id: loggedin_info.id, pending: true } },
-                {
-                    $lookup: {
-                        from: COLLECTION_USERS,
-                        let: { rid: "$requester_id" },
-                        pipeline: [
-                            { $match: { $expr: { $eq: [{ $toString: "$_id" }, "$$rid"] } } },
-                            { $project: { username: 1, last_online: 1, in_game: 1, date_created: 1 } }
-                        ],
-                        as: "user"
-                    }
-                },
-                { $unwind: "$user" },
-                {
-                    $project: {
-                        _id: 0,
-                        id: "$requester_id",
-                        username: "$user.username",
-                        last_online: "$user.last_online",
-                        in_game: "$user.in_game",
-                        date_created: "$user.date_created"
-                    }
-                }
-            ]).toArray()
-        },
-
-        pending_outgoing_requests: async (_, __, {user: loggedin_info}) => {
-            if (!loggedin_info) throw new Error("You are not logged in")
-            return await getDB().collection(COLLECTION_FRIENDS).aggregate([
-                { $match: { requester_id: loggedin_info.id, pending: true } },
-                {
-                    $lookup: {
-                        from: COLLECTION_USERS,
-                        let: { aid: "$accepter_id" },
-                        pipeline: [
-                            { $match: { $expr: { $eq: [{ $toString: "$_id" }, "$$aid"] } } },
-                            { $project: { username: 1, last_online: 1, in_game: 1, date_created: 1 } }
-                        ],
-                        as: "user"
-                    }
-                },
-                { $unwind: "$user" },
-                {
-                    $project: {
-                        _id: 0,
-                        id: "$accepter_id",
-                        username: "$user.username",
-                        last_online: "$user.last_online",
-                        in_game: "$user.in_game",
-                        date_created: "$user.date_created"
-                    }
-                }
-            ]).toArray()
-        },
-        user_by_username: async (_, {username}, __) => {
-            if (!username) throw new Error("You must provide an username")
-
-            const user_data = await getDB().collection(COLLECTION_USERS).findOne(
-                { username: username }
-            )
-
-            if (!user_data) throw new Error("User not found")
-
-            return {
-                id: user_data._id,
-                username: user_data.username,
-                date_created: user_data.date_created
-            }
-        },
+              ],
+              as: "user",
+            },
+          },
+          { $unwind: "$user" },
+          {
+            $project: {
+              _id: 0,
+              id: "$user._id",
+              username: "$user.username",
+              last_online: "$user.last_online",
+              in_game: "$user.in_game",
+              date_created: "$user.date_created",
+            },
+          },
+        ])
+        .toArray();
     },
-    User: {
-        email: (parent, _, { user }) => {
-            if (!user || parent.id?.toString() !== user.id?.toString()) return null
-            return parent.email ?? null
-        },
-        rank: async (parent, _, {}) => {
-            const userBest = await getDB().collection(COLLECTION_RUNS).aggregate([
-                { $match: { user_id: parent.id.toString() } },
-                { $group: { _id: null, maxScore: { $max: "$score" } } }
-            ]).toArray();
+    search: async (_, { usernameSearch }, { user: loggedin_info }) => {
+      if (!loggedin_info) throw new Error("You are not logged in");
 
-            if (userBest.length === 0) return null;
+      const escaped = usernameSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-            const betterPlayers = await getDB().collection(COLLECTION_RUNS).aggregate([
-                { $match: { user_id: { $ne: null } } },
-                { $group: { _id: "$user_id", maxScore: { $max: "$score" } } },
-                { $match: { maxScore: { $gt: userBest[0].maxScore } } },
-                { $count: "count" }
-            ]).toArray();
+      if (!usernameSearch || !escaped)
+        throw new Error("You must give a search keyword");
 
-            return (betterPlayers[0]?.count || 0) + 1;
-        },
-        is_friend: async (parent, _, {user: loggedin_info}) => {
-            if (!loggedin_info) return null
-            const current_friend_status = await getDB().collection(COLLECTION_FRIENDS).findOne({
-                $or: [
-                    { requester_id: loggedin_info.id, accepter_id: parent.id.toString() },
-                    { requester_id: parent.id.toString(), accepter_id: loggedin_info.id }
-                ]
-            })
+      // Find all relationships initiated by the current user
+      const initiatedRelations = await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .find({
+          requester_id: loggedin_info.id,
+        })
+        .toArray();
 
-            if (!current_friend_status) return false
-            else return current_friend_status.pending ? null : true
-        },
+      const excludedIds = initiatedRelations.map(
+        (rel) => new ObjectId(rel.accepter_id),
+      );
+      excludedIds.push(new ObjectId(loggedin_info.id));
+
+      const results = await getDB()
+        .collection(COLLECTION_USERS)
+        .find(
+          {
+            username: { $regex: escaped, $options: "i" },
+            _id: { $nin: excludedIds },
+          },
+          {
+            projection: {
+              _id: 1,
+              username: 1,
+            },
+          },
+        )
+        .limit(10)
+        .toArray();
+
+      const formattedResults = results.map((user) => ({
+        id: user._id,
+        username: user.username,
+      }));
+
+      return formattedResults;
     },
-    Mutation: {
-        addFriend: async (_, {userId: id}, {user: loggedin_info}) => {
-            const current_friend_status = await getDB().collection(COLLECTION_FRIENDS).findOne({
-                $or: [
-                    { requester_id: loggedin_info.id.toString(), accepter_id: id },
-                    { requester_id: id, accepter_id: loggedin_info.id.toString() }
-                ]
-            })
-
-            if (!!current_friend_status) {
-                // friend status found
-                if (current_friend_status.pending && current_friend_status.accepter_id == loggedin_info.id) {
-                    // pending, if current user is accepter, pending => false
-                    const result = await getDB().collection(COLLECTION_FRIENDS).findOneAndUpdate(
-                        {
-                            $or: [
-                                { requester_id: loggedin_info.id.toString(), accepter_id: id },
-                                { requester_id: id, accepter_id: loggedin_info.id.toString() }
-                            ]
-                        },
-                        {
-                            $set: { pending: false }
-                        }
-                    )
-                    if (!!result) return "Success"
-                    else return "Please try again later"
-                } else {
-                    // nothing to do
-                    return ""
-                }
-            }
-            // currently no friend status
-
-            /// Create new document in friend collection
-            const user_exists = await getDB().collection(COLLECTION_USERS).findOne({
-                _id: new ObjectId(id)
-            })
-
-            if (!user_exists) return "User does not exist"
-
-            const data = await getDB().collection(COLLECTION_FRIENDS).insertOne({
-                requester_id: loggedin_info.id,
-                accepter_id: id,
-                pending: true
-            })
-
-            return "Friend request sent"
-        },
-        deleteFriend: async (_, {userId: id}, {user: loggedin_info}) => {
-            const removed = await getDB().collection(COLLECTION_FRIENDS).findOneAndDelete(
+    pending_incoming_requests: async (_, __, { user: loggedin_info }) => {
+      if (!loggedin_info) throw new Error("You are not logged in");
+      return await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .aggregate([
+          { $match: { accepter_id: loggedin_info.id, pending: true } },
+          {
+            $lookup: {
+              from: COLLECTION_USERS,
+              let: { rid: "$requester_id" },
+              pipeline: [
                 {
-                    $or: [
-                        { requester_id: loggedin_info.id.toString(), accepter_id: id },
-                        { requester_id: id, accepter_id: loggedin_info.id.toString() }
-                    ]
-                }
-            )
-        
-            if (!removed) return "No friend status found"
-        
-            return "Successfully removed friend"
-        },
-        changeUsername: async (_, {newUsername}, {user}) => {
-            if (!user) throw new Error("You are not logged in")
-            if (newUsername.length > 16 || newUsername.length < 3) throw new Error("Your new username is not correct")
-            if (newUsername === user.username) throw new Error("New username must be different")
-            if (!checkOnlyAlphanumeric(newUsername)) throw new Error("Username must be alphanumeric")
-            
-                const existingUsername = await getDB().collection(COLLECTION_USERS).findOne({username: newUsername})
-            if (existingUsername) throw new Error("Username already taken")
+                  $match: { $expr: { $eq: [{ $toString: "$_id" }, "$$rid"] } },
+                },
+                {
+                  $project: {
+                    username: 1,
+                    last_online: 1,
+                    in_game: 1,
+                    date_created: 1,
+                  },
+                },
+              ],
+              as: "user",
+            },
+          },
+          { $unwind: "$user" },
+          {
+            $project: {
+              _id: 0,
+              id: "$requester_id",
+              username: "$user.username",
+              last_online: "$user.last_online",
+              in_game: "$user.in_game",
+              date_created: "$user.date_created",
+            },
+          },
+        ])
+        .toArray();
+    },
 
-            if (!await checkProfanity(newUsername)) throw new Error("New username contains profanity")
-            
-            const result = await getDB().collection(COLLECTION_USERS).findOneAndUpdate({
-                _id: new ObjectId(user.id)
-            },{
-                $set: {
-                    username: newUsername
-                }
-            })
+    pending_outgoing_requests: async (_, __, { user: loggedin_info }) => {
+      if (!loggedin_info) throw new Error("You are not logged in");
+      return await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .aggregate([
+          { $match: { requester_id: loggedin_info.id, pending: true } },
+          {
+            $lookup: {
+              from: COLLECTION_USERS,
+              let: { aid: "$accepter_id" },
+              pipeline: [
+                {
+                  $match: { $expr: { $eq: [{ $toString: "$_id" }, "$$aid"] } },
+                },
+                {
+                  $project: {
+                    username: 1,
+                    last_online: 1,
+                    in_game: 1,
+                    date_created: 1,
+                  },
+                },
+              ],
+              as: "user",
+            },
+          },
+          { $unwind: "$user" },
+          {
+            $project: {
+              _id: 0,
+              id: "$accepter_id",
+              username: "$user.username",
+              last_online: "$user.last_online",
+              in_game: "$user.in_game",
+              date_created: "$user.date_created",
+            },
+          },
+        ])
+        .toArray();
+    },
+    user_by_username: async (_, { username }, __) => {
+      if (!username) throw new Error("You must provide an username");
 
-            if (result) return "Username changed successfully"
-            else throw new Error("Unknown error")
-        },
-        changePassword: async (_, {oldPassword, newPassword}, {user}) => {
-            if (!user) throw new Error("You are not logged in")
-            if (oldPassword == newPassword) throw new Error("New password must be different from last one")
-            const userDb = await getDB().collection(COLLECTION_USERS).findOne({_id: new ObjectId(user.id)})
-            if (!userDb) throw new Error("User not found")
-            if (!bcrypt.compareSync(oldPassword, userDb.password)) throw new Error("Old password is incorrect")
-            const res = await getDB().collection(COLLECTION_USERS).findOneAndUpdate({_id: new ObjectId(user.id)}, {
-                $set: {
-                    password: bcrypt.hashSync(newPassword, Number(process.env.SALT_ROUNDS))
-                }
-            })
-            
-            return "Password changed successfully"
-        },
-        deleteAccount: async (_, __, {user}) => {
-            // delete user from collection
-            const result = await getDB().collection(COLLECTION_USERS).findOneAndDelete({
-                _id: new ObjectId(user.id)
-            })
+      const user_data = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOne({ username: username });
 
-            if (!result) return "Error while deleting user"
+      if (!user_data) throw new Error("User not found");
 
-            // Delete all friends
-            const fres = await getDB().collection(COLLECTION_FRIENDS).deleteMany({
+      return {
+        id: user_data._id,
+        username: user_data.username,
+        date_created: user_data.date_created,
+      };
+    },
+  },
+  User: {
+    email: (parent, _, { user }) => {
+      if (!user || parent.id?.toString() !== user.id?.toString()) return null;
+      return parent.email ?? null;
+    },
+    rank: async (parent, _, {}) => {
+      const userBest = await getDB()
+        .collection(COLLECTION_RUNS)
+        .aggregate([
+          { $match: { user_id: parent.id.toString() } },
+          { $group: { _id: null, maxScore: { $max: "$score" } } },
+        ])
+        .toArray();
+
+      if (userBest.length === 0) return null;
+
+      const betterPlayers = await getDB()
+        .collection(COLLECTION_RUNS)
+        .aggregate([
+          { $match: { user_id: { $ne: null } } },
+          { $group: { _id: "$user_id", maxScore: { $max: "$score" } } },
+          { $match: { maxScore: { $gt: userBest[0].maxScore } } },
+          { $count: "count" },
+        ])
+        .toArray();
+
+      return (betterPlayers[0]?.count || 0) + 1;
+    },
+    is_friend: async (parent, _, { user: loggedin_info }) => {
+      if (!loggedin_info) return null;
+      const current_friend_status = await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .findOne({
+          $or: [
+            {
+              requester_id: loggedin_info.id,
+              accepter_id: parent.id.toString(),
+            },
+            {
+              requester_id: parent.id.toString(),
+              accepter_id: loggedin_info.id,
+            },
+          ],
+        });
+
+      if (!current_friend_status) return false;
+      else return current_friend_status.pending ? null : true;
+    },
+  },
+  Mutation: {
+    addFriend: async (_, { userId: id }, { user: loggedin_info }) => {
+      const current_friend_status = await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .findOne({
+          $or: [
+            { requester_id: loggedin_info.id.toString(), accepter_id: id },
+            { requester_id: id, accepter_id: loggedin_info.id.toString() },
+          ],
+        });
+
+      if (!!current_friend_status) {
+        if (
+          current_friend_status.pending &&
+          current_friend_status.accepter_id == loggedin_info.id
+        ) {
+          const result = await getDB()
+            .collection(COLLECTION_FRIENDS)
+            .findOneAndUpdate(
+              {
                 $or: [
-                    {
-                        requester_id: user.id
-                    },
-                    {
-                        accepter_id: user.id
-                    }
-                ]
-            })
-
-            if (!fres) return "Error while deleting user's friends"
-
-            // Set run user id to null
-            const runres = await getDB().collection(COLLECTION_RUNS).updateMany(
-                { user_id: user.id },
-                { $set: { user_id: null }}
-            )
-
-            return "Account deleted successfully"
+                  {
+                    requester_id: loggedin_info.id.toString(),
+                    accepter_id: id,
+                  },
+                  {
+                    requester_id: id,
+                    accepter_id: loggedin_info.id.toString(),
+                  },
+                ],
+              },
+              { $set: { pending: false } },
+            );
+          if (!!result) {
+            const newAchievements = await checkAndUnlockAchievements(
+              loggedin_info.id,
+            );
+            return { message: "Success", newAchievements };
+          }
+          return { message: "Please try again later", newAchievements: [] };
         }
-    }
-}
+        return { message: "", newAchievements: [] };
+      }
+
+      const user_exists = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOne({ _id: new ObjectId(id) });
+      if (!user_exists)
+        return { message: "User does not exist", newAchievements: [] };
+
+      await getDB().collection(COLLECTION_FRIENDS).insertOne({
+        requester_id: loggedin_info.id,
+        accepter_id: id,
+        pending: true,
+      });
+
+      return { message: "Friend request sent", newAchievements: [] };
+    },
+    deleteFriend: async (_, { userId: id }, { user: loggedin_info }) => {
+      const removed = await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .findOneAndDelete({
+          $or: [
+            { requester_id: loggedin_info.id.toString(), accepter_id: id },
+            { requester_id: id, accepter_id: loggedin_info.id.toString() },
+          ],
+        });
+
+      if (!removed) return "No friend status found";
+
+      return "Successfully removed friend";
+    },
+    changeUsername: async (_, { newUsername }, { user }) => {
+      if (!user) throw new Error("You are not logged in");
+      if (newUsername.length > 16 || newUsername.length < 3)
+        throw new Error("Your new username is not correct");
+      if (newUsername === user.username)
+        throw new Error("New username must be different");
+      if (!checkOnlyAlphanumeric(newUsername))
+        throw new Error("Username must be alphanumeric");
+
+      const existingUsername = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOne({ username: newUsername });
+      if (existingUsername) throw new Error("Username already taken");
+
+      if (!(await checkProfanity(newUsername)))
+        throw new Error("New username contains profanity");
+
+      const result = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOneAndUpdate(
+          {
+            _id: new ObjectId(user.id),
+          },
+          {
+            $set: {
+              username: newUsername,
+            },
+          },
+        );
+
+      if (result) return "Username changed successfully";
+      else throw new Error("Unknown error");
+    },
+    changePassword: async (_, { oldPassword, newPassword }, { user }) => {
+      if (!user) throw new Error("You are not logged in");
+      if (oldPassword == newPassword)
+        throw new Error("New password must be different from last one");
+      const userDb = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOne({ _id: new ObjectId(user.id) });
+      if (!userDb) throw new Error("User not found");
+      if (!bcrypt.compareSync(oldPassword, userDb.password))
+        throw new Error("Old password is incorrect");
+      const res = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOneAndUpdate(
+          { _id: new ObjectId(user.id) },
+          {
+            $set: {
+              password: bcrypt.hashSync(
+                newPassword,
+                Number(process.env.SALT_ROUNDS),
+              ),
+            },
+          },
+        );
+
+      return "Password changed successfully";
+    },
+    deleteAccount: async (_, __, { user }) => {
+      // delete user from collection
+      const result = await getDB()
+        .collection(COLLECTION_USERS)
+        .findOneAndDelete({
+          _id: new ObjectId(user.id),
+        });
+
+      if (!result) return "Error while deleting user";
+
+      // Delete all friends
+      const fres = await getDB()
+        .collection(COLLECTION_FRIENDS)
+        .deleteMany({
+          $or: [
+            {
+              requester_id: user.id,
+            },
+            {
+              accepter_id: user.id,
+            },
+          ],
+        });
+
+      if (!fres) return "Error while deleting user's friends";
+
+      // Set run user id to null
+      const runres = await getDB()
+        .collection(COLLECTION_RUNS)
+        .updateMany({ user_id: user.id }, { $set: { user_id: null } });
+
+      return "Account deleted successfully";
+    },
+  },
+};
