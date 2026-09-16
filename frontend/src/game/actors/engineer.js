@@ -24,7 +24,7 @@ export function createEngineer(canvasWidth, canvasHeight) {
         return d;
     });
 
-    return {
+    const engineer = {
         isActor: true,
         team: TEAM.PLAYER,
         targetable: true,
@@ -208,4 +208,10 @@ export function createEngineer(canvasWidth, canvasHeight) {
         onDeath() { },
         draw() { },
     };
+
+    for (const drone of drones) {
+        drone.owner = engineer;
+    }
+
+    return engineer;
 }
