@@ -126,8 +126,10 @@ export function createDrop(x, y, type) {
 
             const dist = Math.hypot(target.x - this.x, target.y - this.y);
 
+            const holder = target.owner ?? target;
+
             if (dist <= this.radius + PICKUP_RADIUS) {
-                applyDropEffect(this.dropType, target, world);
+                applyDropEffect(this.dropType, holder, world);
                 this.dead = true;
                 return;
             }
